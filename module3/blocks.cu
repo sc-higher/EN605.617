@@ -8,8 +8,7 @@ unsigned int cpu_block[ARRAY_SIZE];
 unsigned int cpu_thread[ARRAY_SIZE];
 
 
-__global__
-void what_is_my_id(unsigned int * block, unsigned int * thread)
+__global__ void what_is_my_id(unsigned int * block, unsigned int * thread)
 {
 	const unsigned int thread_idx = (blockIdx.x * blockDim.x) + threadIdx.x;
 	block[thread_idx] = blockIdx.x;
