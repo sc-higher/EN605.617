@@ -35,5 +35,6 @@
 *.vscode
 *.txt
 *.odt
+*.csv
 
 \.DS_Store

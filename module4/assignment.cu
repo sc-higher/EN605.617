@@ -343,28 +343,59 @@ int main(int argc, char** argv)
 	blockSize = *pBlockSize;
 	dataSize = *pDataSize;
 
+	// test harness
+	int iterations = 10;
+	float** res = new float*[2];
+	for(int i = 0; i < 2; ++i) {
+		res[i] = new float[iterations];
+	}
+
 	// set up CUDA timing
 	// https://developer.nvidia.com/blog/how-implement-performance-metrics-cuda-cc/
 	cudaEvent_t start, stop;
 	cudaEventCreate(&start);
 	cudaEventCreate(&stop);
 
-	// paged execution and performance
-	cudaEventRecord(start);
-	paged(pTotalThreads, pBlockSize, pDataSize);
-	cudaEventRecord(stop);
+	for (int i = 0; i < iterations; i++) {
+		
+		// paged execution
+		cudaEventRecord(start);
+		paged(pTotalThreads, pBlockSize, pDataSize);
+		cudaEventRecord(stop);
+		cudaEventSynchronize(stop);
+		cudaEventElapsedTime(&res[0][i], start, stop);
+		
+		// pinned execution
+		cudaEventRecord(start);
+		pinned(pTotalThreads, pBlockSize, pDataSize);
+		cudaEventRecord(stop);
+		cudaEventSynchronize(stop);
+		cudaEventElapsedTime(&res[1][i], start, stop);
 
-	// pinned execution and performance
-	cudaEventRecord(start);
-	pinned(pTotalThreads, pBlockSize, pDataSize);
-	cudaEventRecord(stop);
+	}
+
+	// write results array to file
+	FILE * pFile;
+	pFile = fopen("results.txt","w");
+
+	float sum = 0.0;
+	for(int i = 0; i < iterations; i++) {
+        sum += res[0][i];
+		fprintf(pFile, "Paged[%d] = %f\n", i, res[0][i]);
+    }
+	printf("Paged Average = %f\n", (sum/iterations));
+	fprintf(pFile, "Paged Average = %f\n", (sum/iterations));
 	
-	// // OLD TIMERS
-	// auto start = chrono::high_resolution_clock::now();
-	// auto stop = chrono::high_resolution_clock::now();
-	// auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
+	sum = 0.0;	
+	for(int i = 0; i < iterations; i++) {
+        sum += res[1][i];
+		fprintf(pFile, "Pinned[%d] = %f\n", i, res[1][i]);
+    }
+	printf("Pinned Average = %f\n", (sum/iterations));
+	fprintf(pFile, "Pinned Average = %f\n", (sum/iterations));
+
+	fclose(pFile);
 	
 }
 
 /* ========================================================================== */
-
