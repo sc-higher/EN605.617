@@ -76,7 +76,9 @@ void pageable_transfer_execution(int array_size, int threads_per_block, FILE *in
 
 void pinned_transfer_execution(int array_size, int threads_per_block, FILE *input_fp, FILE *key_fp) { // Code left out for brevity sake
 
-	 //pin it cudaMallocHost((void **)&cpu_text_pinned, array_size_in_bytes); cudaMallocHost((void **)&cpu_key_pinned, array_size_in_bytes);
+	 //pin it 
+	cudaMallocHost((void **)&cpu_text_pinned, array_size_in_bytes); 
+	cudaMallocHost((void **)&cpu_key_pinned, array_size_in_bytes);
 	cudaMallocHost((void **)&cpu_result_pinned, array_size_in_bytes);
 
 	 /* Copy the memory over */ 
