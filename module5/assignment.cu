@@ -537,6 +537,86 @@ void constant_test(int * pTotalThreads, int * pBlockSize, int * pDataSize,
 
 /* ========================================================================== */
 
+/**
+ * @brief 
+ * 
+ * @param in1 
+ * @param in2 
+ * @param out1 
+ * @param pTotalThreads 
+ * @param pBlockSize 
+ * @param pDataSize 
+ */
+ void sample_results(int * pTotalThreads, int * pBlockSize, int * pDataSize) {
+
+	int size = *pDataSize * sizeof(int);
+	int numBlocks = *pTotalThreads / *pBlockSize;
+	int blkSzBytes = *pBlockSize*sizeof(int);
+
+	// allocate host data arrays
+	int *in1 = new int[*pDataSize] {0};
+	int *in2 = new int[*pDataSize] {0};
+	int *out1 = new int[*pDataSize] {0};
+	
+	// generate data and allocate device data (global)
+	int *d_in1, *d_in2, *d_out1;
+	in_generator(in1,*pDataSize,1);
+	in_generator(in2,*pDataSize,2);
+	cudaMalloc((void **) &d_in1, size);
+	cudaMalloc((void **) &d_in2, size);
+	cudaMalloc((void **) &d_out1, size);
+	cudaMemcpy(d_in1, in1, size, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_in2, in2, size, cudaMemcpyHostToDevice);
+		
+	// copy device global --> constant
+	cudaMemcpyToSymbol(c_in2, d_in2, size, 0, cudaMemcpyDeviceToDevice);
+	
+	printf("VERIFY CORRECTNESS\n");
+	printf("================\n");
+
+	// in1 array
+	printf("INPUT 1\n");
+	for (int i = 0; i < 5; i++) {
+		printf("in1[%d] = %d\n", i, in1[i]);
+	}
+	// in2 array
+	printf("INPUT 2\n");
+	for (int i = 0; i < 5; i++) {
+		printf("in2[%d] = %d\n", i, in2[i]);
+	}
+	
+	// global add kernel
+	add<<<numBlocks, *pBlockSize>>>(*pDataSize, d_in1, d_in2, d_out1);
+	cudaMemcpy(out1, d_out1, size, cudaMemcpyDeviceToHost);
+	printf("GLOBAL\n");
+	for (int i = 0; i < 5; i++) {
+		printf("out[%d] = %d\n", i, out1[i]);
+	}
+	// constant add kernel
+	add<<<numBlocks, *pBlockSize>>>(*pDataSize, d_in1, d_out1);
+	cudaMemcpy(out1, d_out1, size, cudaMemcpyDeviceToHost);
+	printf("CONSTANT\n");
+	for (int i = 0; i < 5; i++) {
+		printf("out[%d] = %d\n", i, out1[i]);
+	}
+	// shared add kernel
+	add<<<numBlocks, *pBlockSize, blkSzBytes>>>(*pDataSize, d_in1, d_out1);
+	cudaMemcpy(out1, d_out1, size, cudaMemcpyDeviceToHost);
+	printf("SHARED\n");
+	for (int i = 0; i < 5; i++) {
+		printf("out[%d] = %d\n", i, out1[i]);
+	}
+
+	printf("================\n");
+		
+	// clean up
+	cudaFree(d_in1); cudaFree(d_in2); cudaFree(d_out1);
+	delete [] in1; 	delete [] in2; delete [] out1;
+			
+}
+
+/* ========================================================================== */
+
 int main(int argc, char** argv)
 {
 	using namespace std;
@@ -554,6 +634,8 @@ int main(int argc, char** argv)
 	totalThreads = *pTotalThreads;
 	blockSize = *pBlockSize;
 	dataSize = *pDataSize;
+
+	sample_results(pTotalThreads, pBlockSize, pDataSize);
 
 	// test harness
 	int iterations = 10;
