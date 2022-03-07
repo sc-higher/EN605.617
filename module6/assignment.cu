@@ -1,6 +1,6 @@
 /*
-Sean Connor - February 2022
-605.617 Module 5 Assignment
+Sean Connor - March 2022
+605.617 Module 6 Assignment
 */
 
 /* ========================================================================== */
@@ -17,7 +17,8 @@ static std::mt19937 rng{rd()};
 static std::uniform_int_distribution<int> case2_val(0,3);
 static std::uniform_int_distribution<int> case3_val(0,100);
 
-__constant__ int c_in2[4096];
+__constant__ int c_in1[8192];
+__constant__ int c_in2[8192];
 
 /* ========================================================================== */
 
@@ -30,44 +31,45 @@ __constant__ int c_in2[4096];
  * @param c 
  * @return __global__ 
  */
- __global__ 
+//  __global__ 
+//  void add(int n, int *a, int *b, int *c) {
+	
+// 	for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
+// 		 i < n;
+// 		 i += blockDim.x * gridDim.x)
+// 	{
+// 		c[i] = a[i] + b[i];
+// 	}
+	
+// }
+
+// explicit declaration to emphasize register usage
+__global__ 
  void add(int n, int *a, int *b, int *c) {
 	
-	for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
+	int reg_a, reg_b, reg_c;
+
+    for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
 		 i < n;
 		 i += blockDim.x * gridDim.x)
 	{
-		c[i] = a[i] + b[i];
+		reg_a = a[i];
+        reg_b = b[i];
+        reg_c = reg_a + reg_b;
+        c[i] = reg_c;
 	}
 	
 }
 
 // overload function for constant memory usage
 __global__ 
- void add(int n, int *a, int *c) {
+ void add(int n, int *c) {
 	
 	for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
 		 i < n;
 		 i += blockDim.x * gridDim.x)
 	{
-		c[i] = a[i] + c_in2[i];
-	}
-	
-}
-
-// overload function for shared memory usage
-__global__ 
- void add(int n, int blockSize, int *a, int *b, int *c) {
-	
-	extern __shared__ int s[];
-		
-	for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
-		 i < n;
-		 i += blockDim.x * gridDim.x)
-	{
-		s[i] = b[i];
-		__syncthreads();
-		c[i] = a[i] + s[i];
+		c[i] = c_in1[i] + c_in2[i];
 	}
 	
 }
@@ -83,44 +85,45 @@ __global__
  * @param c 
  * @return __global__ 
  */
-__global__ 
-void subtract(int n, int *a, int *b, int *c) {
+// __global__ 
+// void subtract(int n, int *a, int *b, int *c) {
 	
-	for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
+// 	for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
+// 		 i < n;
+// 		 i += blockDim.x * gridDim.x)
+// 	{
+// 		c[i] = a[i] - b[i];
+// 	}
+	
+// }
+
+// explicit declaration to emphasize register usage
+__global__ 
+ void subtract(int n, int *a, int *b, int *c) {
+	
+	int reg_a, reg_b, reg_c;
+
+    for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
 		 i < n;
 		 i += blockDim.x * gridDim.x)
 	{
-		c[i] = a[i] - b[i];
+		reg_a = a[i];
+        reg_b = b[i];
+        reg_c = reg_a - reg_b;
+        c[i] = reg_c;
 	}
 	
 }
 
 // overload function for constant memory usage
 __global__ 
-void subtract(int n, int *a, int *c) {
+void subtract(int n, int *c) {
 	
 	for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
 		 i < n;
 		 i += blockDim.x * gridDim.x)
 	{
-		c[i] = a[i] - c_in2[i];
-	}
-	
-}
-
-// overload function for shared memory usage
-__global__ 
-void subtract(int n, int blockSize, int *a, int *b, int *c) {
-	
-	extern __shared__ int s[];
-		
-	for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
-		 i < n;
-		 i += blockDim.x * gridDim.x)
-	{
-		s[i] = b[i];
-		__syncthreads();
-		c[i] = a[i] - s[i];
+		c[i] = c_in1[i] - c_in2[i];
 	}
 	
 }
@@ -136,44 +139,45 @@ void subtract(int n, int blockSize, int *a, int *b, int *c) {
  * @param c 
  * @return __global__ 
  */
-__global__ 
-void multiply(int n, int *a, int *b, int *c) {
+// __global__ 
+// void multiply(int n, int *a, int *b, int *c) {
 	
-	for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
+// 	for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
+// 		 i < n;
+// 		 i += blockDim.x * gridDim.x)
+// 	{
+// 		c[i] = a[i] * b[i];
+// 	}
+	
+// }
+
+// explicit declaration to emphasize register usage
+__global__ 
+ void multiply(int n, int *a, int *b, int *c) {
+	
+	int reg_a, reg_b, reg_c;
+
+    for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
 		 i < n;
 		 i += blockDim.x * gridDim.x)
 	{
-		c[i] = a[i] * b[i];
+		reg_a = a[i];
+        reg_b = b[i];
+        reg_c = reg_a * reg_b;
+        c[i] = reg_c;
 	}
 	
 }
 
 // overload function for constant memory usage
 __global__ 
-void multiply(int n, int *a, int *c) {
+void multiply(int n, int *c) {
 	
 	for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
 		 i < n;
 		 i += blockDim.x * gridDim.x)
 	{
-		c[i] = a[i] * c_in2[i];
-	}
-	
-}
-
-// overload function for shared memory usage
-__global__ 
-void multiply(int n, int blockSize, int *a, int *b, int *c) {
-	
-	extern __shared__ int s[];
-		
-	for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
-		 i < n;
-		 i += blockDim.x * gridDim.x)
-	{
-		s[i] = b[i];
-		__syncthreads();
-		c[i] = a[i] * s[i];
+		c[i] = c_in1[i] * c_in2[i];
 	}
 	
 }
@@ -189,44 +193,45 @@ void multiply(int n, int blockSize, int *a, int *b, int *c) {
  * @param c 
  * @return __global__ 
  */
-__global__ 
-void modulo(int n, int *a, int *b, int *c) {
+// __global__ 
+// void modulo(int n, int *a, int *b, int *c) {
 	
-	for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
+// 	for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
+// 		 i < n;
+// 		 i += blockDim.x * gridDim.x)
+// 	{
+// 		c[i] = a[i] % b[i];
+// 	}
+	
+// }
+
+// explicit declaration to emphasize register usage
+__global__ 
+ void modulo(int n, int *a, int *b, int *c) {
+	
+	int reg_a, reg_b, reg_c;
+
+    for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
 		 i < n;
 		 i += blockDim.x * gridDim.x)
 	{
-		c[i] = a[i] % b[i];
+		reg_a = a[i];
+        reg_b = b[i];
+        reg_c = reg_a % reg_b;
+        c[i] = reg_c;
 	}
 	
 }
 
 // overload function for constant memory usage
 __global__ 
-void modulo(int n, int *a, int *c) {
+void modulo(int n, int *c) {
 	
 	for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
 		 i < n;
 		 i += blockDim.x * gridDim.x)
 	{
-		c[i] = a[i] % c_in2[i];
-	}
-	
-}
-
-// overload function for shared memory usage
-__global__ 
- void modulo(int n, int blockSize, int *a, int *b, int *c) {
-	
-	extern __shared__ int s[];
-		
-	for (int i = (blockIdx.x * blockDim.x) + threadIdx.x;
-		 i < n;
-		 i += blockDim.x * gridDim.x)
-	{
-		s[i] = b[i];
-		__syncthreads();
-		c[i] = a[i] % s[i];
+		c[i] = c_in1[i] % c_in2[i];
 	}
 	
 }
@@ -379,6 +384,7 @@ void constant_test(int * pTotalThreads, int * pBlockSize, int * pDataSize,
 	cudaMemcpy(d_in2, in2, size, cudaMemcpyHostToDevice);
 		
 	// copy device global --> constant
+    cudaMemcpyToSymbol(c_in1, d_in1, size, 0, cudaMemcpyDeviceToDevice);
 	cudaMemcpyToSymbol(c_in2, d_in2, size, 0, cudaMemcpyDeviceToDevice);
 
 	// set up CUDA timing
@@ -389,75 +395,10 @@ void constant_test(int * pTotalThreads, int * pBlockSize, int * pDataSize,
 
 	// execute kernels and time
 	cudaEventRecord(start);	
-	add<<<numBlocks, *pBlockSize>>>(*pDataSize, d_in1, d_out1);
-	subtract<<<numBlocks, *pBlockSize>>>(*pDataSize, d_in1, d_out1);
-	multiply<<<numBlocks, *pBlockSize>>>(*pDataSize, d_in1, d_out1);
-	modulo<<<numBlocks, *pBlockSize>>>(*pDataSize, d_in1, d_out1);
-	cudaEventRecord(stop);
-	cudaEventSynchronize(stop);
-	cudaEventElapsedTime(pTimer, start, stop);	
-	
-	// // print statement to verify accuracy of results
-	// cudaMemcpy(out1, d_out1, size, cudaMemcpyDeviceToHost);
-	// for (int j = 0; j < *pDataSize; j+=128) {
-	// 	printf("out[%d] = %d\n", j, out1[j]);
-	// }
-		
-	// clean up
-	cudaFree(d_in1); cudaFree(d_in2); cudaFree(d_out1);
-	delete [] in1; 	delete [] in2; delete [] out1;
-			
-}
-
-/* ========================================================================== */
-
-/**
- * @brief 
- * 
- * @param in1 
- * @param in2 
- * @param out1 
- * @param pTotalThreads 
- * @param pBlockSize 
- * @param pDataSize 
- */
- void shared_test(int * pTotalThreads, int * pBlockSize, int * pDataSize, 
-	float * pTimer) {
-
-	int size = *pDataSize * sizeof(int);
-	int numBlocks = *pTotalThreads / *pBlockSize;
-
-	// allocate host data arrays
-	int *in1 = new int[*pDataSize] {0};
-	int *in2 = new int[*pDataSize] {0};
-	int *out1 = new int[*pDataSize] {0};
-	
-	// generate data and allocate device data (global)
-	int *d_in1, *d_in2, *d_out1;
-	in_generator(in1,*pDataSize,1);
-	in_generator(in2,*pDataSize,2);
-	cudaMalloc((void **) &d_in1, size);
-	cudaMalloc((void **) &d_in2, size);
-	cudaMalloc((void **) &d_out1, size);
-	cudaMemcpy(d_in1, in1, size, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_in2, in2, size, cudaMemcpyHostToDevice);
-		
-	// copy device global --> constant
-	cudaMemcpyToSymbol(c_in2, d_in2, size, 0, cudaMemcpyDeviceToDevice);
-
-	// set up CUDA timing
-	// https://developer.nvidia.com/blog/how-implement-performance-metrics-cuda-cc/
-	cudaEvent_t start, stop;
-	cudaEventCreate(&start);
-	cudaEventCreate(&stop);
-
-	// execute kernels and time
-	int blkSzBytes = *pBlockSize*sizeof(int);
-	cudaEventRecord(start);	
-	add<<<numBlocks, *pBlockSize, blkSzBytes>>>(*pDataSize, d_in1, d_out1);
-	subtract<<<numBlocks, *pBlockSize, blkSzBytes>>>(*pDataSize, d_in1, d_out1);
-	multiply<<<numBlocks, *pBlockSize, blkSzBytes>>>(*pDataSize, d_in1, d_out1);
-	modulo<<<numBlocks, *pBlockSize, blkSzBytes>>>(*pDataSize, d_in1, d_out1);
+	add<<<numBlocks, *pBlockSize>>>(*pDataSize, d_out1);
+	subtract<<<numBlocks, *pBlockSize>>>(*pDataSize, d_out1);
+	multiply<<<numBlocks, *pBlockSize>>>(*pDataSize, d_out1);
+	modulo<<<numBlocks, *pBlockSize>>>(*pDataSize, d_out1);
 	cudaEventRecord(stop);
 	cudaEventSynchronize(stop);
 	cudaEventElapsedTime(pTimer, start, stop);	
@@ -551,7 +492,6 @@ void constant_test(int * pTotalThreads, int * pBlockSize, int * pDataSize,
 
 	int size = *pDataSize * sizeof(int);
 	int numBlocks = *pTotalThreads / *pBlockSize;
-	int blkSzBytes = *pBlockSize*sizeof(int);
 
 	// allocate host data arrays
 	int *in1 = new int[*pDataSize] {0};
@@ -569,6 +509,7 @@ void constant_test(int * pTotalThreads, int * pBlockSize, int * pDataSize,
 	cudaMemcpy(d_in2, in2, size, cudaMemcpyHostToDevice);
 		
 	// copy device global --> constant
+    cudaMemcpyToSymbol(c_in1, d_in1, size, 0, cudaMemcpyDeviceToDevice);
 	cudaMemcpyToSymbol(c_in2, d_in2, size, 0, cudaMemcpyDeviceToDevice);
 	
 	printf("VERIFY CORRECTNESS\n");
@@ -592,17 +533,11 @@ void constant_test(int * pTotalThreads, int * pBlockSize, int * pDataSize,
 	for (int i = 0; i < 5; i++) {
 		printf("out[%d] = %d\n", i, out1[i]);
 	}
+
 	// constant add kernel
-	add<<<numBlocks, *pBlockSize>>>(*pDataSize, d_in1, d_out1);
+	add<<<numBlocks, *pBlockSize>>>(*pDataSize, d_out1);
 	cudaMemcpy(out1, d_out1, size, cudaMemcpyDeviceToHost);
 	printf("CONSTANT\n");
-	for (int i = 0; i < 5; i++) {
-		printf("out[%d] = %d\n", i, out1[i]);
-	}
-	// shared add kernel
-	add<<<numBlocks, *pBlockSize, blkSzBytes>>>(*pDataSize, d_in1, d_out1);
-	cudaMemcpy(out1, d_out1, size, cudaMemcpyDeviceToHost);
-	printf("SHARED\n");
 	for (int i = 0; i < 5; i++) {
 		printf("out[%d] = %d\n", i, out1[i]);
 	}
@@ -617,27 +552,18 @@ void constant_test(int * pTotalThreads, int * pBlockSize, int * pDataSize,
 
 /* ========================================================================== */
 
-int main(int argc, char** argv)
-{
-	using namespace std;
-	
-	// read command line arguments
-	int totalThreads = 8192;
-	int blockSize = 256;
-	int dataSize = 8192;
-	float timer = 0.0;
-	int *pTotalThreads = &totalThreads;
-	int *pBlockSize = &blockSize;
-	int *pDataSize = &dataSize;
-	float *pTimer = &timer;
-	parse_cmdline(argc, argv, pTotalThreads, pBlockSize, pDataSize);
-	totalThreads = *pTotalThreads;
-	blockSize = *pBlockSize;
-	dataSize = *pDataSize;
+/**
+ * @brief 
+ * 
+ * @param pTotalThreads 
+ * @param pBlockSize 
+ * @param pDataSize 
+ * @param pTimer 
+ */
+void execute_gpu(int * pTotalThreads, int * pBlockSize, int * pDataSize, 
+    float * pTimer) {
 
-	sample_results(pTotalThreads, pBlockSize, pDataSize);
-
-	// test harness
+    // test harness
 	int iterations = 10;
 	float** res = new float*[3];
 	for(int i = 0; i < 3; ++i) {
@@ -649,10 +575,6 @@ int main(int argc, char** argv)
 		// constant memory test
 		constant_test(pTotalThreads, pBlockSize, pDataSize, pTimer);
 		res[0][i] = *pTimer;
-		
-		// shared memory test
-		shared_test(pTotalThreads, pBlockSize, pDataSize, pTimer);
-		res[1][i] = *pTimer;
 
 		// global memory test
 		global_test(pTotalThreads, pBlockSize, pDataSize, pTimer);
@@ -671,14 +593,7 @@ int main(int argc, char** argv)
     }
 	printf("Constant Memory Average = %f\n", (sum/iterations));
 	fprintf(pFile, "Constant Memory Average = %f\n", (sum/iterations));
-	
-	sum = 0.0;	
-	for(int i = 0; i < iterations; i++) {
-        sum += res[1][i];
-		fprintf(pFile, "Shared Memory[%d] = %f\n", i, res[1][i]);
-    }
-	printf("Shared Memory Average = %f\n", (sum/iterations));
-	fprintf(pFile, "Shared Memory Average = %f\n", (sum/iterations));
+
 
 	sum = 0.0;	
 	for(int i = 0; i < iterations; i++) {
@@ -689,6 +604,28 @@ int main(int argc, char** argv)
 	fprintf(pFile, "Global Memory Average = %f\n", (sum/iterations));
 
 	fclose(pFile);
+    
+}
+
+/* ========================================================================== */
+
+int main(int argc, char** argv) {
+	
+    using namespace std;
+	
+	// read command line arguments
+	int totalThreads = 4096;
+	int blockSize = 256;
+	int dataSize = 4096;
+	float timer = 0.0;
+	int *pTotalThreads = &totalThreads;
+	int *pBlockSize = &blockSize;
+	int *pDataSize = &dataSize;
+	float *pTimer = &timer;
+
+	parse_cmdline(argc, argv, pTotalThreads, pBlockSize, pDataSize);
+	sample_results(pTotalThreads, pBlockSize, pDataSize);
+    execute_gpu(pTotalThreads, pBlockSize, pDataSize, pTimer);
 	
 }
 
