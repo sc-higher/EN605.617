@@ -286,8 +286,7 @@ void parse_cmdline(int argc, char **argv, int * numTh, int * blSz, int * dataSz)
 		*blSz = atoi(argv[2]);
 	}
 	if (argc >= 4) {
-		// *dataSz = atoi(argv[3]);
-		*dataSz = 4096;
+		*dataSz = atoi(argv[3]);
 	}
 
 	int numBlocks = *numTh / *blSz;	
