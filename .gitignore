@@ -37,5 +37,6 @@
 *.odt
 *.ods
 *.csv
+*.png
 
 \.DS_Store
