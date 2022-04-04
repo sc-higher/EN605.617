@@ -38,5 +38,6 @@
 *.ods
 *.csv
 *.png
+*.pgm
 
 \.DS_Store
