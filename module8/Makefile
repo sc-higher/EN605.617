@@ -1,2 +1,2 @@
-all: assignment.c
-	gcc assignment.c -o assignment.exe
+all: assignment.cu
+	nvcc assignment.cu -L /usr/local/cuda/lib -lcudart -lcufft -lcublas -lcurand -std=c++11 -o assignment
