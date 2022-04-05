@@ -100,8 +100,17 @@ void generateData(int * toNode , int * fromNode , int len) {
 
 /* ========================================================================== */
 
-void executePageRank(int len) {
+void executePageRank(int len, float * pTimer) {
 
+    // set up CUDA timing
+	// https://developer.nvidia.com/blog/how-implement-performance-metrics-cuda-cc/
+	cudaEvent_t start, stop;
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+
+	// begin timer
+	cudaEventRecord(start);
+    
     // create data arrays
     int* toNode = new int[len];
     int* fromNode = new int[len];
@@ -179,9 +188,14 @@ void executePageRank(int len) {
     // Get result
     nvgraphGetVertexData(handle, graph, pr_1, 1);
 
-    for(int i=0; i<5; i++) {
-        printf("res[%d] = %f\n",i,pr_1[i]);
-    }
+    // stop timer
+	cudaEventRecord(stop);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(pTimer, start, stop);
+
+    // for(int i=0; i<5; i++) {
+    //     printf("res[%d] = %f\n",i,pr_1[i]);
+    // }
 
     // Free memory
     nvgraphDestroy(handle);
@@ -219,7 +233,8 @@ void executePageRank(int len) {
 
 	for (int i = 0; i < iterations; i++) {
 
-		// thrust arithmetic test
+		// run it
+        executePageRank(*pDataSize, *pTimer);
 		res[0][i] = *pTimer;
 
 	}
@@ -231,7 +246,7 @@ void executePageRank(int len) {
 	float sum = 0.0;
 	for(int i = 0; i < iterations; i++) {
         sum += res[0][i];
-		fprintf(pFile, "Thrust[%d] = %f\n", i, res[0][i]);
+		fprintf(pFile, "nvgraph[%d] = %f\n", i, res[0][i]);
     }
 	printf("\nAverage Time (ms) = %f\n", (sum/iterations));
 	fprintf(pFile, "Average Time (ms) = %f\n", (sum/iterations));
@@ -257,8 +272,7 @@ int main(int argc, char** argv) {
 	float *pTimer = &timer;
 
 	parseCmdline(argc, argv, pTotalThreads, pBlockSize, pDataSize);
-    executePageRank(*pDataSize);   
-    // testFramework(pDataSize, pTimer);
+    testFramework(pDataSize, pTimer);
     
     return 0;
 	
