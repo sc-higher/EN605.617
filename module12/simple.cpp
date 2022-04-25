@@ -121,7 +121,7 @@ int main(int argc, char** argv)
     if (errNum != CL_SUCCESS && errNum != CL_DEVICE_NOT_FOUND)
     {
         checkErr(errNum, "clGetDeviceIDs");
-    }       
+    }  
 
     deviceIDs = (cl_device_id *)alloca(sizeof(cl_device_id) * numDevices);
     errNum = clGetDeviceIDs(
