@@ -39,5 +39,6 @@
 *.csv
 *.png
 *.pgm
+*.dll
 
 \.DS_Store
