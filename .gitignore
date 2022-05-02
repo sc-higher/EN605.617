@@ -40,5 +40,7 @@
 *.png
 *.pgm
 *.dll
+*.mod
+*.zip
 
 \.DS_Store
