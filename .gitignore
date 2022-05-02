@@ -42,5 +42,6 @@
 *.dll
 *.mod
 *.zip
+*.m
 
 \.DS_Store
