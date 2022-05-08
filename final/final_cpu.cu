@@ -6,6 +6,7 @@ Sean Connor - May 2022
 /* ========================================================================== */
 
 #include <stdio.h>
+#include <chrono>
 
 #ifndef M_PI
     #define M_PI 3.14159265358979323846
@@ -76,9 +77,6 @@ Sean Connor - May 2022
     float alpha,
     float * p_timer) {
 
-	int size = data_size * sizeof(float);
-	int num_blocks = total_threads / block_size;
-
 	// allocate host data arrays 
 	float *T = new float[data_size] {0.0};
 
@@ -95,37 +93,30 @@ Sean Connor - May 2022
         time += dt;
     }
 
-    // set up CUDA timing
-	// https://developer.nvidia.com/blog/how-implement-performance-metrics-cuda-cc/
-	cudaEvent_t start, stop;
-	cudaEventCreate(&start);
-	cudaEventCreate(&stop);
-    cudaEventRecord(start);
-	
-	// allocate device and copy from host
-	float *d_T;
-	cudaMalloc((void **) &d_T, size);
-	cudaMemcpy(d_T, T, size, cudaMemcpyHostToDevice);	
+    // start timer
+    auto start = std::chrono::high_resolution_clock::now();
 	
     // all data kept in a single 1D array - need to index each time step
     int idx_start = 0;
     int idx_stop = 0;
     float r = alpha*dt/(dx*dx);
 
-    // execute each time step in CUDA
+    // execute each time step in CPU
     for (int i=0; i<nt; i++) {
         idx_start = i * nx + 1;
         idx_stop = idx_start + nx - 3;
-        ftcs<<<num_blocks, block_size>>>(data_size, idx_start, idx_stop, r, d_T);
-    }
-	
-	// copy data back to host
-	cudaMemcpy(T, d_T, size, cudaMemcpyDeviceToHost);
 
-    // stop CUDA timing
-    cudaEventRecord(stop);
-	cudaEventSynchronize(stop);
-	cudaEventElapsedTime(p_timer, start, stop);
+        for (int j=idx_start; j<=idx_stop; j++) {
+            T[j+nx] = r*T[j-1] + (1-2*r)*T[j] + r*T[j+1];
+        }
+        
+    }
+
+    // stop timer
+    auto stop = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+
+    printf("Duration: %.2fms\n", (float)duration.count()/1000);
 
     // make X and t linspaces for grid study
     float x_linspace[NX] = {0.0};
@@ -149,8 +140,6 @@ Sean Connor - May 2022
         }
         fprintf(p_file,"\n");
     }
-
-    printf("Elapsed Time (ms): %.2f\n", *p_timer);
     
     // Alternate format matrix-style
     // for (int i=0; i<data_size; i++) {
@@ -163,7 +152,6 @@ Sean Connor - May 2022
     fclose(p_file);
 		
 	// clean up
-	cudaFree(d_T);
 	delete [] T;
 			
 }

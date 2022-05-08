@@ -6,6 +6,7 @@ Sean Connor - May 2022
 /* ========================================================================== */
 
 #include <stdio.h>
+#include <cmath>
 
 #ifndef M_PI
     #define M_PI 3.14159265358979323846
@@ -15,6 +16,7 @@ Sean Connor - May 2022
 #define NX 101
 #define NT 10001
 #define ALPHA 0.1
+#define GAMMA 1.4
 #define T_MAX 5.0
 #define LENGTH 1.0
 
@@ -79,21 +81,103 @@ Sean Connor - May 2022
 	int size = data_size * sizeof(float);
 	int num_blocks = total_threads / block_size;
 
-	// allocate host data arrays 
-	float *T = new float[data_size] {0.0};
+	// set constants
+    float gamma = GAMMA;
+    float r = dt/(4*dx);
+    
+    // allocate data arrays
+    // Physical Results 
+	float *rho = new float[data_size] {0.0};
+    float *u = new float[data_size] {0.0};
+    float *P = new float[data_size] {0.0};
+
+	float *d_rho, *d_u, *d_P;
+	cudaMalloc((void **) &d_rho, size);
+    cudaMalloc((void **) &d_u, size);
+    cudaMalloc((void **) &d_P, size);
+	cudaMemcpy(d_rho, rho, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_u, u, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_P, P, size, cudaMemcpyHostToDevice);
+
+    // Physical Intermediates
+    float *rho1 = new float[data_size] {0.0};
+    float *u1 = new float[data_size] {0.0};
+    float *P1 = new float[data_size] {0.0};
+    float *E1 = new float[data_size] {0.0};
+    float *c1 = new float[data_size] {0.0};
+
+    
+
+    // F and F Intermediates
+    float F1n = new float[data_size] {0.0};
+    float F1p = new float[data_size] {0.0};
+    float F2n = new float[data_size] {0.0};
+    float F2p = new float[data_size] {0.0};
+    float F3n = new float[data_size] {0.0};
+    float F3p = new float[data_size] {0.0};
+    float F1n1 = new float[data_size] {0.0};
+    float F1p1 = new float[data_size] {0.0};
+    float F2n1 = new float[data_size] {0.0};
+    float F2p1 = new float[data_size] {0.0};
+    float F3n1 = new float[data_size] {0.0};
+    float F3p1 = new float[data_size] {0.0};
+
+    // Q Intermediates
+    float Q1 = new float[data_size] {0.0};
+    float Q2 = new float[data_size] {0.0};
+    float Q3 = new float[data_size] {0.0};
+    float R = new float[data_size] {0.0};
+
+    // Area
+    float S = new float[nx] {0.0};
+    float dS = new float[nx] {0.0};
+
 
     // set initial condition
-    for (int i=1; i<nx-1; i++) {
-        T[i] = 1.0;
+    float P_init = 1.0/gamma;
+    for (int i=0; i<nx-1; i++) {
+        rho[i] = 1.0;
+        u[i] = 0.8;
+        P[i] = P_init;
     }
 
     // set boundary conditions
-    float time = 0.0;
     for (int i=0; i<data_size; i += nx) {
-        T[i] = 1 + sin(M_PI*time); //1.0;
-        T[i + nx - 1] = 5.0;
-        time += dt;
+        rho[i] = 1.0;
+        rho[i+nx-1] = 1.0;
+        u[i] =  0.8;
+        u[i+nx-1] = 0.8;
+        P[i] = P_init;
+        P[i+nx-1] = P_init;
     }
+
+    // initialize E, c, and Qn
+    for (int i=0; i<data_size; i++) {
+        E[i] = P[i] / (rho[i] * (gamma-1)) + pow(u[i],2) / 2; 
+        c[i] = sqrt((gamma*P[i]) / rho[i]);
+        Q1[i] = rho[i];
+        Q2[i] = rho[i] * u[i];
+        Q3[i] = rho[i] * E[i];
+    }
+
+    // initialize Fn and Fp
+
+    // make X and t linspaces
+    float x_linspace[nx] = {0.0};
+    float t_linspace[nt] = {0.0};
+    for (int i=1; i<nx; i++) {
+        x_linspace[i] = x_linspace[i-1] + dx;
+    }
+    for (int i=1; i<nt; i++) {
+        t_linspace[i] = t_linspace[i-1] + dt;
+    }
+
+    // set area
+    for (int i=0; i<nx-1; i++) {
+        S[i] = 1 + pow((2.2*(x_linspace[i]-1.5)),2);
+        dS[i] = 4.4 * (x_linspace[i] - 1.5);
+    }
+
 
     // set up CUDA timing
 	// https://developer.nvidia.com/blog/how-implement-performance-metrics-cuda-cc/
@@ -126,16 +210,6 @@ Sean Connor - May 2022
     cudaEventRecord(stop);
 	cudaEventSynchronize(stop);
 	cudaEventElapsedTime(p_timer, start, stop);
-
-    // make X and t linspaces for grid study
-    float x_linspace[NX] = {0.0};
-    float t_linspace[NT] = {0.0};
-    for (int i=1; i<nx; i++) {
-        x_linspace[i] = x_linspace[i-1] + dx;
-    }
-    for (int i=1; i<nt; i++) {
-        t_linspace[i] = t_linspace[i-1] + dt;
-    }
 
     // write results array to file (t,x,T) 
     // note gnuplot format requires a newline between 'blocks' for 3D data
