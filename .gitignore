@@ -43,5 +43,16 @@
 *.mod
 *.zip
 *.m
+*.dat
+*.jpg
+*.png
+*.log
+*.pdf
+*.tex
+*.gz
+*.bib
+*.blg
+*.bbl
+*.odp
 
 \.DS_Store
