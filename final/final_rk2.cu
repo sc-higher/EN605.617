@@ -6,7 +6,6 @@ Sean Connor - May 2022
 /* ========================================================================== */
 
 #include <stdio.h>
-#include <chrono>
 
 #ifndef M_PI
     #define M_PI 3.14159265358979323846
@@ -18,6 +17,46 @@ Sean Connor - May 2022
 #define ALPHA 0.1
 #define T_MAX 5.0
 #define LENGTH 1.0
+
+// CUDA Default Parameters
+#define TOTAL_THREADS 8192
+#define BLOCK_SIZE 256
+
+/* ========================================================================== */
+
+/**
+ * @brief 
+ * 
+ * @param data_size : length of data array
+ * @param start : starting index for calculation
+ * @param stop : ending index for calculation
+ * @param r : rk2 equation constant
+ * @param T : data array
+ * @return __global__ 
+ */
+ __global__ 
+ void rk2(int data_size, int start, int stop, float alpha, float r, float dx, float dt, float * T, float * K, float * R) {
+	
+	int nx = stop-start+3; // this is the length of each 'row'
+
+    start = start - 1;
+    
+    int i = threadIdx.x + start;
+    int num_threads = NX;
+
+    if (threadIdx.x == 0) {
+        K[i] = T[i] + r*(T[i+2] - 2*T[i+1] + T[i]);
+    } else if (threadIdx.x == num_threads-1) {
+        K[i] = T[i] + r*(T[i-2] - 2*T[i-1] + T[i]);
+    }
+    
+    if (threadIdx.x > 0 && threadIdx.x < num_threads-1) {
+        K[i] = T[i] + r*(T[i+1] - 2*T[i] + T[i-1]);
+        R[i] = (alpha/pow(dx,2)) * (K[i+1] - 2*K[i] + K[i-1]);
+        T[i+NX] = 0.5 * (T[i] + K[i] + dt*R[i]);
+    }
+	
+}
 
 /* ========================================================================== */
 
@@ -33,16 +72,24 @@ Sean Connor - May 2022
  * @param dt size of time step
  * @param alpha thermal diffusivity constant
  */
- void execute_ftcs(
+ void execute_rk2(
+    int total_threads,
+    int block_size,
     int data_size, 
     int nx,
     int nt,
     float dx,
     float dt,
-    float alpha) {
+    float alpha,
+    float * p_timer) {
+
+	int size = data_size * sizeof(float);
+	int num_blocks = total_threads / block_size;
 
 	// allocate host data arrays 
 	float *T = new float[data_size] {0.0};
+    float *K = new float[data_size] {0.0};
+    float *R = new float[data_size] {0.0};
 
     // set initial condition
     for (int i=1; i<nx-1; i++) {
@@ -57,30 +104,41 @@ Sean Connor - May 2022
         time += dt;
     }
 
-    // start timer
-    auto start = std::chrono::high_resolution_clock::now();
+    // set up CUDA timing
+	// https://developer.nvidia.com/blog/how-implement-performance-metrics-cuda-cc/
+	cudaEvent_t start, stop;
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+    cudaEventRecord(start);
+	
+	// allocate device and copy from host
+	float *d_T, *d_K, *d_R;
+	cudaMalloc((void **) &d_T, size);
+	cudaMemcpy(d_T, T, size, cudaMemcpyHostToDevice);
+    cudaMalloc((void **) &d_K, size);
+	cudaMemcpy(d_K, K, size, cudaMemcpyHostToDevice);
+    cudaMalloc((void **) &d_R, size);
+	cudaMemcpy(d_R, R, size, cudaMemcpyHostToDevice);	
 	
     // all data kept in a single 1D array - need to index each time step
     int idx_start = 0;
     int idx_stop = 0;
     float r = alpha*dt/(dx*dx);
 
-    // execute each time step in CPU
+    // execute each time step in CUDA
     for (int i=0; i<nt; i++) {
         idx_start = i * nx + 1;
         idx_stop = idx_start + nx - 3;
-
-        for (int j=idx_start; j<=idx_stop; j++) {
-            T[j+nx] = r*T[j-1] + (1-2*r)*T[j] + r*T[j+1];
-        }
-        
+        rk2<<<1, nx>>>(data_size, idx_start, idx_stop, alpha, r, dx, dt, d_T, d_K, d_R);
     }
+	
+	// copy data back to host
+	cudaMemcpy(T, d_T, size, cudaMemcpyDeviceToHost);
 
-    // stop timer
-    auto stop = std::chrono::high_resolution_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-
-    printf("Duration: %.2fms\n", (float)duration.count()/1000);
+    // stop CUDA timing
+    cudaEventRecord(stop);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(p_timer, start, stop);
 
     // make X and t linspaces for grid study
     float x_linspace[NX] = {0.0};
@@ -105,9 +163,12 @@ Sean Connor - May 2022
         fprintf(p_file,"\n");
     }
 
+    printf("Elapsed Time (ms): %.2f\n", *p_timer);
+
     fclose(p_file);
 		
 	// clean up
+	cudaFree(d_T);
 	delete [] T;
 			
 }
@@ -117,6 +178,12 @@ Sean Connor - May 2022
 int main(int argc, char** argv)
 {
 	using namespace std;
+	
+	// CUDA Parameters
+	int total_threads = TOTAL_THREADS;
+	int block_size = BLOCK_SIZE;
+    float timer = 0.0;
+	float *p_timer = &timer;
 
     // CFD Parameters
     int nx = NX;
@@ -128,8 +195,8 @@ int main(int argc, char** argv)
     float dx = length / (nx-1);
     float dt = t_max / (nt-1);
 
-    // execute the FTCS method on host
-	execute_ftcs(data_size, nx, nt, dx, dt, alpha);
+    // execute the rk2 kernel
+	execute_rk2(total_threads, block_size, data_size, nx, nt, dx, dt, alpha, p_timer);
     
 }
 
