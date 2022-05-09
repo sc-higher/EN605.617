@@ -54,5 +54,6 @@
 *.blg
 *.bbl
 *.odp
+*.aux
 
 \.DS_Store
